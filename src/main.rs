@@ -109,51 +109,52 @@ impl Emulator {
                 let x_val = self.memory.read_register(x as usize);
                 let y_val = self.memory.read_register(y as usize);
 
-                let result = x_val as u16 + y_val as u16;
-
-                self.memory
-                    .write_register(0xF, if result > 255 { 1 } else { 0 });
-
                 self.memory
                     .write_register(x as usize, u8::wrapping_add(x_val, y_val));
+
+                let result = x_val as u16 + y_val as u16;
+                self.memory
+                    .write_register(0xF, if result > 255 { 1 } else { 0 });
             }
             (0x8, x, y, 0x5) => {
                 let x_val = self.memory.read_register(x as usize);
                 let y_val = self.memory.read_register(y as usize);
 
                 self.memory
-                    .write_register(0xF, if x_val > y_val { 1 } else { 0 });
+                    .write_register(x as usize, u8::wrapping_sub(x_val, y_val));
 
                 self.memory
-                    .write_register(x as usize, u8::wrapping_sub(x_val, y_val));
+                    .write_register(0xF, if x_val >= y_val { 1 } else { 0 });
             }
             (0x8, x, y, 0x6) => {
                 let mut y_val = self.memory.read_register(y as usize);
 
-                let rest = (y_val & 0x80) >> 7;
-                self.memory.write_register(0xF, rest);
-
+                let rest = (y_val & 0x01);
                 y_val >>= 1;
+
                 self.memory.write_register(x as usize, y_val);
+
+                self.memory.write_register(0xF, rest);
             }
             (0x8, x, y, 0x7) => {
                 let x_val = self.memory.read_register(x as usize);
                 let y_val = self.memory.read_register(y as usize);
 
                 self.memory
-                    .write_register(0xF, if y_val > x_val { 1 } else { 0 });
+                    .write_register(x as usize, u8::wrapping_sub(y_val, x_val));
 
                 self.memory
-                    .write_register(x as usize, u8::wrapping_sub(y_val, x_val));
+                    .write_register(0xF, if y_val >= x_val { 1 } else { 0 });
             }
             (0x8, x, y, 0xe) => {
                 let mut y_val = self.memory.read_register(y as usize);
 
-                let rest = (y_val & 0x01);
-                self.memory.write_register(0xF, rest);
-
+                let rest = (y_val & 0x80) >> 7;
                 y_val <<= 1;
+
                 self.memory.write_register(x as usize, y_val);
+
+                self.memory.write_register(0xF, rest);
             }
             (0x9, x, y, 0) => {
                 if self.memory.read_register(x as usize) != self.memory.read_register(y as usize) {
