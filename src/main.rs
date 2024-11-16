@@ -1,22 +1,25 @@
 use crate::clock::Clock;
 use crate::display::Display;
+use crate::keyboard::Keyboard;
 use crate::memory::Memory;
 use crate::memory::ToU16;
 use crate::memory::ToU8;
+use std::ops::Not;
 use std::thread::sleep;
 use std::time::Duration;
 use std::{env, fs};
 
-mod display;
-mod memory;
-
 mod clock;
+mod display;
+mod keyboard;
+mod memory;
 
 struct Emulator {
     memory: Memory,
+    pc: u16,
     display: Display,
     clock: Clock,
-    pc: u16,
+    keyboard: Keyboard,
 }
 
 impl Emulator {
@@ -26,9 +29,10 @@ impl Emulator {
 
         Emulator {
             memory,
+            pc: 0x200,
             display: Display::new(64, 32),
             clock: Clock::new(),
-            pc: 0x200,
+            keyboard: Keyboard::new(),
         }
     }
 
@@ -45,7 +49,7 @@ impl Emulator {
         let instruction = self.memory.read_u16(self.pc as usize);
         let instruction_parts = memory::u16_to_u4_array(instruction);
         self.pc += 2;
-
+        
         match (
             instruction_parts[0],
             instruction_parts[1],
@@ -194,6 +198,23 @@ impl Emulator {
                 self.display.print();
 
                 //todo set VF if something something got turned off
+            }
+            (0xE, x, 0x9, 0xE) => {
+                if (self
+                    .keyboard
+                    .isKeyPressed(self.memory.read_register(x as usize)))
+                {
+                    self.pc += 2;
+                }
+            }
+            (0xE, x, 0xA, 0x1) => {
+                if (self
+                    .keyboard
+                    .isKeyPressed(self.memory.read_register(x as usize))
+                    .not())
+                {
+                    self.pc += 2;
+                }
             }
             (0xF, x, 0x0, 0x7) => {
                 self.memory
