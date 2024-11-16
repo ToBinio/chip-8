@@ -58,18 +58,17 @@ impl Emulator {
                 self.pc = (a, b, c).to_u16();
             }
             (0x3, x, a, b) => {
-                if (self.memory.read_register(x as usize) == (a, b).to_u8()) {
+                if self.memory.read_register(x as usize) == (a, b).to_u8() {
                     self.pc += 2;
                 }
             }
             (0x4, x, a, b) => {
-                if (self.memory.read_register(x as usize) != (a, b).to_u8()) {
+                if self.memory.read_register(x as usize) != (a, b).to_u8() {
                     self.pc += 2;
                 }
             }
             (0x5, x, y, 0) => {
-                if (self.memory.read_register(x as usize) == self.memory.read_register(y as usize))
-                {
+                if self.memory.read_register(x as usize) == self.memory.read_register(y as usize) {
                     self.pc += 2;
                 }
             }
@@ -116,8 +115,7 @@ impl Emulator {
                 self.memory
                     .write_register(0xF, if result > 255 { 1 } else { 0 });
 
-                self.memory
-                    .write_register(x as usize, (result % 255) as u8);
+                self.memory.write_register(x as usize, (result % 255) as u8);
             }
 
             (0x8, x, y, 0x5) => {
@@ -143,8 +141,7 @@ impl Emulator {
             }
 
             (0x9, x, y, 0) => {
-                if (self.memory.read_register(x as usize) != self.memory.read_register(y as usize))
-                {
+                if self.memory.read_register(x as usize) != self.memory.read_register(y as usize) {
                     self.pc += 2;
                 }
             }
@@ -165,7 +162,7 @@ impl Emulator {
                             self.display.flip_pixel(x + 8 - x_off, y + y_off)
                         }
 
-                        to_render = to_render >> 1
+                        to_render >>= 1
                     }
 
                     current_pointer += 1;
@@ -183,7 +180,7 @@ impl Emulator {
 }
 
 fn main() {
-    let program_path = env::args().skip(1).next();
+    let program_path = env::args().nth(1);
 
     let program_path = match program_path {
         Some(program_path) => program_path,
