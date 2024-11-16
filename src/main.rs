@@ -174,7 +174,7 @@ impl Emulator {
 
                     for x_off in 0..8 {
                         if (to_render & 0x01) == 0x01 {
-                            self.display.flip_pixel(x + 8 - x_off, y + y_off)
+                            self.display.flip_pixel(x + 7 - x_off, y + y_off)
                         }
 
                         to_render >>= 1
