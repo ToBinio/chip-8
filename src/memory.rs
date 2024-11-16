@@ -2,6 +2,7 @@ pub struct Memory {
     mem: Vec<u8>,
     registers: [u8; 16],
     index_register: u16,
+    stack: Vec<u16>,
 }
 
 impl Memory {
@@ -10,6 +11,7 @@ impl Memory {
             mem: vec![0; size],
             registers: [0; 16],
             index_register: 0,
+            stack: vec![],
         }
     }
 
@@ -30,7 +32,7 @@ impl Memory {
     }
 
     pub fn write_register(&mut self, index: usize, values: u8) {
-        self.registers[index] = values as u8;
+        self.registers[index] = values;
     }
 
     pub fn read_index_register(&self) -> u16 {
@@ -39,6 +41,14 @@ impl Memory {
 
     pub fn write_index_register(&mut self, index: u16) {
         self.index_register = index;
+    }
+
+    pub fn push_stack(&mut self, value: u16) {
+        self.stack.push(value);
+    }
+
+    pub fn pop_stack(&mut self) -> u16 {
+        self.stack.pop().unwrap()
     }
 }
 
