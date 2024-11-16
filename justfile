@@ -3,4 +3,8 @@ run path:
 
 ibm: (run "programs/ibm-logo.ch8")
 
-test: (run "programs/test_opcode.ch8")
+chip8: (run "programs/chip8-logo.ch8")
+
+corax: (run "programs/corax.ch8")
+
+flags: (run "programs/flags.ch8")

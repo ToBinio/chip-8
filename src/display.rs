@@ -34,9 +34,9 @@ impl Display {
         for y in 0..32 {
             for x in 0..64 {
                 if self.pixels[y * 64 + x] {
-                    print!("█")
+                    print!("██")
                 } else {
-                    print!(".")
+                    print!("  ")
                 }
             }
 
