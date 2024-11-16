@@ -1,27 +1,29 @@
+use crate::display::Display;
+use crate::memory::Memory;
+use crate::memory::ToU16;
+use crate::memory::ToU8;
 use std::thread::sleep;
 use std::time::Duration;
 use std::{env, fs};
 
+mod display;
+mod memory;
+
 struct Emulator {
-    memory: Vec<u8>,
+    memory: Memory,
+    display: Display,
     pc: u16,
-    //64x32
-    display: Vec<bool>,
-    registers: [u8; 16],
-    index_register: u16,
 }
 
 impl Emulator {
     fn new(program: Vec<u8>) -> Emulator {
-        let mut memory = vec![0u8; 4096];
-        memory[0x200..0x200 + program.len()].copy_from_slice(&program);
+        let mut memory = Memory::new(4096);
+        memory.write_slice(0x200, &program);
 
         Emulator {
             memory,
             pc: 0x200,
-            display: vec![true; 64 * 32],
-            registers: [0; 16],
-            index_register: 0,
+            display: Display::new(64, 32),
         }
     }
 
@@ -34,42 +36,45 @@ impl Emulator {
     }
 
     fn tick(&mut self) {
-        let instruction = self.get_current_instruction();
+        let instruction = self.memory.read_u16(self.pc as usize);
+        let instruction_parts = memory::u16_to_u4_array(instruction);
         self.pc += 2;
 
         match (
-            instruction[0],
-            instruction[1],
-            instruction[2],
-            instruction[3],
+            instruction_parts[0],
+            instruction_parts[1],
+            instruction_parts[2],
+            instruction_parts[3],
         ) {
             (0x0, 0x0, 0xE, 0x0) => {
-                self.display.fill(false);
+                self.display.clear();
             }
             (0x1, a, b, c) => {
-                self.pc = ((a as u16) << 8) + ((b as u16) << 4) + c as u16;
+                self.pc = (a, b, c).to_u16();
             }
             (0x6, x, a, b) => {
-                self.registers[x as usize] = (a << 4) + b;
+                self.memory.write_register(x as usize, (a, b).to_u8());
             }
             (0x7, x, a, b) => {
-                self.registers[x as usize] += (a << 4) + b;
+                let current = self.memory.read_register(x as usize);
+                self.memory
+                    .write_register(x as usize, current + (a, b).to_u8());
             }
             (0xA, a, b, c) => {
-                self.index_register = ((a as u16) << 8) + ((b as u16) << 4) + c as u16;
+                self.memory.write_index_register((a, b, c).to_u16());
             }
             (0xD, x, y, n) => {
-                let x = self.registers[x as usize] as usize % 64;
-                let y = self.registers[y as usize] as usize % 32;
+                let x = self.memory.read_register(x as usize) as usize % self.display.width();
+                let y = self.memory.read_register(y as usize) as usize % self.display.height();
 
-                let mut current_pointer = self.index_register as usize;
+                let mut current_pointer = self.memory.read_index_register();
 
                 for y_off in 0..n as usize {
-                    let mut to_render = self.memory[current_pointer];
+                    let mut to_render = self.memory.read_u8(current_pointer as usize);
 
                     for x_off in 0..8 {
                         if (to_render & 0x01) == 0x01 {
-                            self.flip_pixel(x + 8 - x_off, y + y_off)
+                            self.display.flip_pixel(x + 8 - x_off, y + y_off)
                         }
 
                         to_render = to_render >> 1
@@ -78,61 +83,15 @@ impl Emulator {
                     current_pointer += 1;
                 }
 
-                self.render();
+                self.display.print();
 
                 //todo set VF if something something got turned off
             }
             (_, _, _, _) => {
-                panic!(
-                    "unimplemented instruction: {}",
-                    fmt_instruction(&instruction)
-                );
+                panic!("unimplemented instruction: {:#06x}", instruction);
             }
         }
     }
-
-    fn flip_pixel(&mut self, x: usize, y: usize) {
-        self.display[y * 64 + x] = !self.display[y * 64 + x];
-    }
-
-    fn render(&mut self) {
-        for y in 0..32 {
-            for x in 0..64 {
-                if self.display[y * 64 + x] {
-                    print!("█")
-                } else {
-                    print!(".")
-                }
-            }
-
-            println!();
-        }
-
-        println!();
-        println!();
-    }
-
-    fn get_current_instruction(&self) -> [u8; 4] {
-        let first_byte = self.memory[self.pc as usize];
-        let second_byte = self.memory[self.pc as usize + 1];
-
-        [
-            (first_byte & 0xF0) >> 4,
-            first_byte & 0x0F,
-            (second_byte & 0xF0) >> 4,
-            second_byte & 0x0F,
-        ]
-    }
-}
-
-fn fmt_instruction(instruction: &[u8; 4]) -> String {
-    format!(
-        "{:#06x}",
-        instruction[3] as u16
-            + ((instruction[2] as u16) << 4)
-            + ((instruction[1] as u16) << 8)
-            + ((instruction[0] as u16) << 12)
-    )
 }
 
 fn main() {
