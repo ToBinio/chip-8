@@ -109,12 +109,13 @@ impl Emulator {
                 let x_val = self.memory.read_register(x as usize);
                 let y_val = self.memory.read_register(y as usize);
 
-                let result = x_val as u16 | y_val as u16;
+                let result = x_val as u16 + y_val as u16;
 
                 self.memory
                     .write_register(0xF, if result > 255 { 1 } else { 0 });
 
-                self.memory.write_register(x as usize, (result % 255) as u8);
+                self.memory
+                    .write_register(x as usize, u8::wrapping_add(x_val, y_val));
             }
             (0x8, x, y, 0x5) => {
                 let x_val = self.memory.read_register(x as usize);
@@ -197,9 +198,9 @@ impl Emulator {
 
                 let index = self.memory.read_index_register() as usize;
 
-                let first_digit = x % 10;
+                let first_digit = (x / 100);
                 let second_digit = (x / 10) % 10;
-                let third_digit = (x / 100);
+                let third_digit = x % 10;
 
                 self.memory.write_u8(index, first_digit);
                 self.memory.write_u8(index + 1, second_digit);
