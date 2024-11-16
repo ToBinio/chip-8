@@ -1,5 +1,5 @@
 use crate::clock::Clock;
-use crate::display::Display;
+use crate::display::{Display, RenderContext};
 use crate::keyboard::Keyboard;
 use crate::memory::Memory;
 use crate::memory::ToU16;
@@ -15,6 +15,8 @@ mod keyboard;
 mod memory;
 
 struct Emulator {
+    program_name: String,
+
     memory: Memory,
     pc: u16,
     display: Display,
@@ -23,11 +25,12 @@ struct Emulator {
 }
 
 impl Emulator {
-    fn new(program: Vec<u8>) -> Emulator {
+    fn new(program: Vec<u8>, program_name: String) -> Emulator {
         let mut memory = Memory::new(4096);
         memory.write_slice(0x200, &program);
 
         Emulator {
+            program_name,
             memory,
             pc: 0x200,
             display: Display::new(64, 32),
@@ -45,11 +48,19 @@ impl Emulator {
         }
     }
 
+    fn render(&self) {
+        let context = RenderContext {
+            title: self.program_name.clone(),
+        };
+
+        self.display.print(context);
+    }
+
     fn tick(&mut self) {
         let instruction = self.memory.read_u16(self.pc as usize);
         let instruction_parts = memory::u16_to_u4_array(instruction);
         self.pc += 2;
-        
+
         match (
             instruction_parts[0],
             instruction_parts[1],
@@ -58,7 +69,7 @@ impl Emulator {
         ) {
             (0x0, 0x0, 0xE, 0x0) => {
                 self.display.clear();
-                self.display.print();
+                self.render();
             }
             (0x0, 0x0, 0xE, 0xE) => self.pc = self.memory.pop_stack(),
             (0x1, a, b, c) => {
@@ -195,7 +206,7 @@ impl Emulator {
                     current_pointer += 1;
                 }
 
-                self.display.print();
+                self.render();
 
                 //todo set VF if something something got turned off
             }
@@ -294,6 +305,6 @@ fn main() {
         }
     };
 
-    let mut emulator = Emulator::new(program);
+    let mut emulator = Emulator::new(program, program_path);
     emulator.run();
 }

@@ -1,8 +1,18 @@
+use crossterm::cursor::MoveTo;
+use crossterm::execute;
+use crossterm::style::{Print, Stylize};
+use crossterm::terminal::{Clear, ClearType};
+use std::io::stdout;
+
 pub struct Display {
     pixels: Vec<bool>,
 
     width: usize,
     height: usize,
+}
+
+pub struct RenderContext {
+    pub title: String,
 }
 
 impl Display {
@@ -30,20 +40,31 @@ impl Display {
         self.pixels.fill(false);
     }
 
-    pub fn print(&mut self) {
-        for y in 0..32 {
-            for x in 0..64 {
-                if self.pixels[y * 64 + x] {
-                    print!("██")
+    pub fn print(&self, context: RenderContext) {
+        let mut stdout = stdout();
+
+        execute!(
+            stdout,
+            Clear(ClearType::All),
+            MoveTo(0, 0),
+            Print(format!("{}\n", context.title.bold())),
+            Print(format!("╭{}╮\n", "──".repeat(self.width))),
+        )
+        .unwrap();
+
+        for y in 0..self.height {
+            execute!(stdout, Print("│")).unwrap();
+            for x in 0..self.width {
+                if self.pixels[y * self.width + x] {
+                    execute!(stdout, Print("██")).unwrap();
                 } else {
-                    print!("  ")
+                    execute!(stdout, Print("  ")).unwrap();
                 }
             }
 
-            println!();
+            execute!(stdout, Print("│\n")).unwrap();
         }
 
-        println!();
-        println!();
+        execute!(stdout, Print(format!("╰{}╯\n", "──".repeat(self.width))),).unwrap()
     }
 }
