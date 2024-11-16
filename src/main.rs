@@ -105,7 +105,6 @@ impl Emulator {
 
                 self.memory.write_register(x as usize, x_val ^ y_val);
             }
-
             (0x8, x, y, 0x4) => {
                 let x_val = self.memory.read_register(x as usize);
                 let y_val = self.memory.read_register(y as usize);
@@ -117,7 +116,6 @@ impl Emulator {
 
                 self.memory.write_register(x as usize, (result % 255) as u8);
             }
-
             (0x8, x, y, 0x5) => {
                 let x_val = self.memory.read_register(x as usize);
                 let y_val = self.memory.read_register(y as usize);
@@ -128,7 +126,15 @@ impl Emulator {
                 self.memory
                     .write_register(x as usize, u8::wrapping_sub(x_val, y_val));
             }
+            (0x8, x, y, 0x6) => {
+                let mut y_val = self.memory.read_register(y as usize);
 
+                let rest = (y_val & 0x80) >> 7;
+                self.memory.write_register(0xF, rest);
+
+                y_val >>= 1;
+                self.memory.write_register(x as usize, y_val);
+            }
             (0x8, x, y, 0x7) => {
                 let x_val = self.memory.read_register(x as usize);
                 let y_val = self.memory.read_register(y as usize);
@@ -139,7 +145,15 @@ impl Emulator {
                 self.memory
                     .write_register(x as usize, u8::wrapping_sub(y_val, x_val));
             }
+            (0x8, x, y, 0xe) => {
+                let mut y_val = self.memory.read_register(y as usize);
 
+                let rest = (y_val & 0x01);
+                self.memory.write_register(0xF, rest);
+
+                y_val <<= 1;
+                self.memory.write_register(x as usize, y_val);
+            }
             (0x9, x, y, 0) => {
                 if self.memory.read_register(x as usize) != self.memory.read_register(y as usize) {
                     self.pc += 2;
@@ -171,6 +185,43 @@ impl Emulator {
                 self.display.print();
 
                 //todo set VF if something something got turned off
+            }
+            (0xF, x, 0x1, 0xE) => {
+                let x = self.memory.read_register(x as usize);
+                let index = self.memory.read_index_register();
+
+                self.memory.write_index_register(index + x as u16);
+            }
+            (0xF, x, 0x3, 0x3) => {
+                let x = self.memory.read_register(x as usize);
+
+                let index = self.memory.read_index_register() as usize;
+
+                let first_digit = x % 10;
+                let second_digit = (x / 10) % 10;
+                let third_digit = (x / 100);
+
+                self.memory.write_u8(index, first_digit);
+                self.memory.write_u8(index + 1, second_digit);
+                self.memory.write_u8(index + 2, third_digit);
+            }
+            (0xF, x, 0x5, 0x5) => {
+                for register in 0..=x {
+                    self.memory.write_u8(
+                        self.memory.read_index_register() as usize + register as usize,
+                        self.memory.read_register(register as usize),
+                    )
+                }
+            }
+            (0xF, x, 0x6, 0x5) => {
+                for register in 0..=x {
+                    self.memory.write_register(
+                        register as usize,
+                        self.memory.read_u8(
+                            self.memory.read_index_register() as usize + register as usize,
+                        ),
+                    );
+                }
             }
             (_, _, _, _) => {
                 panic!("unimplemented instruction: {:#06x}", instruction);

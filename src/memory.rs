@@ -23,6 +23,10 @@ impl Memory {
         self.mem[index]
     }
 
+    pub fn write_u8(&mut self, index: usize, data: u8) {
+        self.mem[index] = data;
+    }
+
     pub fn read_u16(&self, index: usize) -> u16 {
         u16::from_be_bytes([self.mem[index], self.mem[index + 1]])
     }
