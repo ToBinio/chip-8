@@ -1,3 +1,4 @@
+use crate::clock::Clock;
 use crate::display::Display;
 use crate::memory::Memory;
 use crate::memory::ToU16;
@@ -9,9 +10,12 @@ use std::{env, fs};
 mod display;
 mod memory;
 
+mod clock;
+
 struct Emulator {
     memory: Memory,
     display: Display,
+    clock: Clock,
     pc: u16,
 }
 
@@ -22,8 +26,9 @@ impl Emulator {
 
         Emulator {
             memory,
-            pc: 0x200,
             display: Display::new(64, 32),
+            clock: Clock::new(),
+            pc: 0x200,
         }
     }
 
@@ -31,6 +36,7 @@ impl Emulator {
         loop {
             //todo find end of program...
             self.tick();
+            self.clock.tick();
             sleep(Duration::from_millis(2));
         }
     }
@@ -48,6 +54,7 @@ impl Emulator {
         ) {
             (0x0, 0x0, 0xE, 0x0) => {
                 self.display.clear();
+                self.display.print();
             }
             (0x0, 0x0, 0xE, 0xE) => self.pc = self.memory.pop_stack(),
             (0x1, a, b, c) => {
@@ -187,6 +194,18 @@ impl Emulator {
                 self.display.print();
 
                 //todo set VF if something something got turned off
+            }
+            (0xF, x, 0x0, 0x7) => {
+                self.memory
+                    .write_register(x as usize, self.clock.delay_timer());
+            }
+            (0xF, x, 0x1, 0x5) => {
+                self.clock
+                    .set_delay_timer(self.memory.read_register(x as usize));
+            }
+            (0xF, x, 0x1, 0x8) => {
+                self.clock
+                    .set_sound_timer(self.memory.read_register(x as usize));
             }
             (0xF, x, 0x1, 0xE) => {
                 let x = self.memory.read_register(x as usize);
