@@ -51,6 +51,7 @@ impl Emulator {
     fn render(&self) {
         let context = RenderContext {
             title: self.program_name.clone(),
+            registries: self.memory.clone_registers(),
         };
 
         self.display.print(context);

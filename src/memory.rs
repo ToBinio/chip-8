@@ -31,6 +31,10 @@ impl Memory {
         u16::from_be_bytes([self.mem[index], self.mem[index + 1]])
     }
 
+    pub fn clone_registers(&self) -> [u8; 16] {
+        self.registers.clone()
+    }
+
     pub fn read_register(&self, index: usize) -> u8 {
         self.registers[index]
     }

@@ -1,8 +1,8 @@
-use crossterm::cursor::MoveTo;
+use crossterm::cursor::{MoveTo, MoveToColumn};
 use crossterm::execute;
 use crossterm::style::{Print, Stylize};
 use crossterm::terminal::{Clear, ClearType};
-use std::io::stdout;
+use std::io::{stdout, Stdout};
 
 pub struct Display {
     pixels: Vec<bool>,
@@ -13,6 +13,7 @@ pub struct Display {
 
 pub struct RenderContext {
     pub title: String,
+    pub registries: [u8; 16],
 }
 
 impl Display {
@@ -40,20 +41,37 @@ impl Display {
         self.pixels.fill(false);
     }
 
+    const screen_offset: u16 = 10;
+
     pub fn print(&self, context: RenderContext) {
         let mut stdout = stdout();
 
+        execute!(stdout, Clear(ClearType::All),).unwrap();
+
+        self.print_registries(&context, &mut stdout);
+        self.print_screen(&context, &mut stdout);
+    }
+
+    fn print_registries(&self, context: &RenderContext, stdout: &mut Stdout) {
+        execute!(stdout, MoveTo(0, 1), Print("Registers\n"),).unwrap();
+
+        for register in context.registries {
+            execute!(stdout, Print(format!("{:#04x}\n", register))).unwrap();
+        }
+    }
+
+    fn print_screen(&self, context: &RenderContext, stdout: &mut Stdout) {
         execute!(
             stdout,
-            Clear(ClearType::All),
-            MoveTo(0, 0),
-            Print(format!("{}\n", context.title.bold())),
+            MoveTo(Self::screen_offset, 0),
+            Print(format!("{}\n", context.title.clone().bold())),
+            MoveToColumn(Self::screen_offset),
             Print(format!("╭{}╮\n", "──".repeat(self.width))),
         )
         .unwrap();
 
         for y in 0..self.height {
-            execute!(stdout, Print("│")).unwrap();
+            execute!(stdout, MoveToColumn(Self::screen_offset), Print("│")).unwrap();
             for x in 0..self.width {
                 if self.pixels[y * self.width + x] {
                     execute!(stdout, Print("██")).unwrap();
@@ -65,6 +83,11 @@ impl Display {
             execute!(stdout, Print("│\n")).unwrap();
         }
 
-        execute!(stdout, Print(format!("╰{}╯\n", "──".repeat(self.width))),).unwrap()
+        execute!(
+            stdout,
+            MoveToColumn(Self::screen_offset),
+            Print(format!("╰{}╯\n", "──".repeat(self.width))),
+        )
+        .unwrap()
     }
 }
