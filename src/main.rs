@@ -4,6 +4,7 @@ use crate::keyboard::Keyboard;
 use crate::memory::Memory;
 use crate::memory::ToU16;
 use crate::memory::ToU8;
+use crossterm::event::KeyCode;
 use std::ops::Not;
 use std::thread::sleep;
 use std::time::Duration;
@@ -40,8 +41,16 @@ impl Emulator {
     }
 
     pub fn run(&mut self) {
+        let pressed_keys = self.keyboard.pressed_keys.clone();
+        async_std::task::spawn(async move {
+            Keyboard::print_events(pressed_keys).await;
+        });
+
         loop {
-            //todo find end of program...
+            if self.keyboard.is_key_pressed(KeyCode::Esc) {
+                break;
+            }
+
             self.tick();
             self.clock.tick();
             sleep(Duration::from_millis(2));
@@ -214,7 +223,7 @@ impl Emulator {
             (0xE, x, 0x9, 0xE) => {
                 if (self
                     .keyboard
-                    .isKeyPressed(self.memory.read_register(x as usize)))
+                    .is_key_pressed(self.keyboard.map_key(self.memory.read_register(x as usize))))
                 {
                     self.pc += 2;
                 }
@@ -222,7 +231,7 @@ impl Emulator {
             (0xE, x, 0xA, 0x1) => {
                 if (self
                     .keyboard
-                    .isKeyPressed(self.memory.read_register(x as usize))
+                    .is_key_pressed(self.keyboard.map_key(self.memory.read_register(x as usize)))
                     .not())
                 {
                     self.pc += 2;

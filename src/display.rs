@@ -56,7 +56,12 @@ impl Display {
         execute!(stdout, MoveTo(0, 1), Print("Registers\n"),).unwrap();
 
         for register in context.registries {
-            execute!(stdout, Print(format!("{:#04x}\n", register))).unwrap();
+            execute!(
+                stdout,
+                MoveToColumn(0),
+                Print(format!("{:#04x}\n", register))
+            )
+            .unwrap();
         }
     }
 
@@ -87,6 +92,7 @@ impl Display {
             stdout,
             MoveToColumn(Self::screen_offset),
             Print(format!("╰{}╯\n", "──".repeat(self.width))),
+            MoveToColumn(0),
         )
         .unwrap()
     }
