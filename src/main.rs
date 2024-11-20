@@ -1,6 +1,6 @@
 use crate::clock::Clock;
-use crate::display::{Display, RenderContext};
-use crate::keyboard::Keyboard;
+use crate::gpu::GPU;
+use crate::io::{RenderContext, IO};
 use crate::memory::Memory;
 use crate::memory::ToU16;
 use crate::memory::ToU8;
@@ -11,18 +11,17 @@ use std::time::Duration;
 use std::{env, fs};
 
 mod clock;
-mod display;
-mod keyboard;
+mod gpu;
+mod io;
 mod memory;
 
 struct Emulator {
     program_name: String,
 
     memory: Memory,
-    pc: u16,
-    display: Display,
+    display: GPU,
     clock: Clock,
-    keyboard: Keyboard,
+    io: IO,
 }
 
 impl Emulator {
@@ -30,24 +29,27 @@ impl Emulator {
         let mut memory = Memory::new(4096);
         memory.write_slice(0x200, &program);
 
+        memory.write_pc(0x200);
+
+        let io = IO::new(64, 32);
+
         Emulator {
             program_name,
             memory,
-            pc: 0x200,
-            display: Display::new(64, 32),
+            display: GPU::new(&io),
             clock: Clock::new(),
-            keyboard: Keyboard::new(),
+            io,
         }
     }
 
     pub fn run(&mut self) {
-        let pressed_keys = self.keyboard.pressed_keys.clone();
+        let pressed_keys = self.io.pressed_keys.clone();
         async_std::task::spawn(async move {
-            Keyboard::print_events(pressed_keys).await;
+            IO::start(pressed_keys).await;
         });
 
         loop {
-            if self.keyboard.is_key_pressed(KeyCode::Esc) {
+            if self.io.is_key_pressed(KeyCode::Esc) {
                 break;
             }
 
@@ -59,17 +61,18 @@ impl Emulator {
 
     fn render(&self) {
         let context = RenderContext {
-            title: self.program_name.clone(),
-            registries: self.memory.clone_registers(),
+            title: &self.program_name,
+            registries: self.memory.registers(),
+            pixels: self.display.pixels(),
         };
 
-        self.display.print(context);
+        self.io.render(context);
     }
 
     fn tick(&mut self) {
-        let instruction = self.memory.read_u16(self.pc as usize);
+        let instruction = self.memory.read_u16(self.memory.read_pc() as usize);
         let instruction_parts = memory::u16_to_u4_array(instruction);
-        self.pc += 2;
+        self.memory.increment_pc();
 
         match (
             instruction_parts[0],
@@ -81,27 +84,30 @@ impl Emulator {
                 self.display.clear();
                 self.render();
             }
-            (0x0, 0x0, 0xE, 0xE) => self.pc = self.memory.pop_stack(),
+            (0x0, 0x0, 0xE, 0xE) => {
+                let stack = self.memory.pop_stack();
+                self.memory.write_pc(stack)
+            }
             (0x1, a, b, c) => {
-                self.pc = (a, b, c).to_u16();
+                self.memory.write_pc((a, b, c).to_u16());
             }
             (0x2, a, b, c) => {
-                self.memory.push_stack(self.pc);
-                self.pc = (a, b, c).to_u16();
+                self.memory.push_stack(self.memory.read_pc());
+                self.memory.write_pc((a, b, c).to_u16())
             }
             (0x3, x, a, b) => {
                 if self.memory.read_register(x as usize) == (a, b).to_u8() {
-                    self.pc += 2;
+                    self.memory.increment_pc();
                 }
             }
             (0x4, x, a, b) => {
                 if self.memory.read_register(x as usize) != (a, b).to_u8() {
-                    self.pc += 2;
+                    self.memory.increment_pc();
                 }
             }
             (0x5, x, y, 0) => {
                 if self.memory.read_register(x as usize) == self.memory.read_register(y as usize) {
-                    self.pc += 2;
+                    self.memory.increment_pc();
                 }
             }
             (0x6, x, a, b) => {
@@ -190,15 +196,17 @@ impl Emulator {
             }
             (0x9, x, y, 0) => {
                 if self.memory.read_register(x as usize) != self.memory.read_register(y as usize) {
-                    self.pc += 2;
+                    self.memory.increment_pc();
                 }
             }
             (0xA, a, b, c) => {
                 self.memory.write_index_register((a, b, c).to_u16());
             }
             (0xD, x, y, n) => {
-                let x = self.memory.read_register(x as usize) as usize % self.display.width();
-                let y = self.memory.read_register(y as usize) as usize % self.display.height();
+                //todo move to gpu
+
+                let x = self.memory.read_register(x as usize) as usize % self.io.width();
+                let y = self.memory.read_register(y as usize) as usize % self.io.height();
 
                 let mut current_pointer = self.memory.read_index_register();
 
@@ -222,19 +230,19 @@ impl Emulator {
             }
             (0xE, x, 0x9, 0xE) => {
                 if (self
-                    .keyboard
-                    .is_key_pressed(self.keyboard.map_key(self.memory.read_register(x as usize))))
+                    .io
+                    .is_code_pressed(self.memory.read_register(x as usize)))
                 {
-                    self.pc += 2;
+                    self.memory.increment_pc();
                 }
             }
             (0xE, x, 0xA, 0x1) => {
                 if (self
-                    .keyboard
-                    .is_key_pressed(self.keyboard.map_key(self.memory.read_register(x as usize)))
+                    .io
+                    .is_code_pressed(self.memory.read_register(x as usize))
                     .not())
                 {
-                    self.pc += 2;
+                    self.memory.increment_pc();
                 }
             }
             (0xF, x, 0x0, 0x7) => {

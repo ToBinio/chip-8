@@ -3,6 +3,7 @@ pub struct Memory {
     registers: [u8; 16],
     index_register: u16,
     stack: Vec<u16>,
+    pc: u16,
 }
 
 impl Memory {
@@ -12,7 +13,20 @@ impl Memory {
             registers: [0; 16],
             index_register: 0,
             stack: vec![],
+            pc: 0,
         }
+    }
+
+    pub fn write_pc(&mut self, pc: u16) {
+        self.pc = pc;
+    }
+
+    pub fn increment_pc(&mut self) {
+        self.pc += 2;
+    }
+
+    pub fn read_pc(&self) -> u16 {
+        self.pc
     }
 
     pub fn write_slice(&mut self, index: usize, data: &[u8]) {
@@ -31,8 +45,8 @@ impl Memory {
         u16::from_be_bytes([self.mem[index], self.mem[index + 1]])
     }
 
-    pub fn clone_registers(&self) -> [u8; 16] {
-        self.registers.clone()
+    pub fn registers(&self) -> &[u8; 16] {
+        &self.registers
     }
 
     pub fn read_register(&self, index: usize) -> u8 {
