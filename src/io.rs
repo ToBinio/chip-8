@@ -118,7 +118,7 @@ impl IO {
         disable_raw_mode().unwrap();
     }
 
-    const SCREEN_OFFSET: u16 = 10;
+    const REGISTRIES_WIDTH: u16 = 10;
 
     pub fn render(&self, context: RenderContext) {
         let mut stdout = stdout();
@@ -126,6 +126,7 @@ impl IO {
         execute!(stdout, Clear(ClearType::All),).unwrap();
 
         self.print_registries(&context, &mut stdout);
+        self.print_keyboard(&mut stdout);
         self.print_screen(&context, &mut stdout);
     }
 
@@ -145,15 +146,15 @@ impl IO {
     fn print_screen(&self, context: &RenderContext, stdout: &mut Stdout) {
         execute!(
             stdout,
-            MoveTo(Self::SCREEN_OFFSET, 0),
+            MoveTo(Self::REGISTRIES_WIDTH, 0),
             Print(format!("{}\n", context.title.bold())),
-            MoveToColumn(Self::SCREEN_OFFSET),
+            MoveToColumn(Self::REGISTRIES_WIDTH),
             Print(format!("╭{}╮\n", "──".repeat(self.width()))),
         )
         .unwrap();
 
         for y in 0..self.height() {
-            execute!(stdout, MoveToColumn(Self::SCREEN_OFFSET), Print("│")).unwrap();
+            execute!(stdout, MoveToColumn(Self::REGISTRIES_WIDTH), Print("│")).unwrap();
             for x in 0..self.width() {
                 if context.pixels[y * self.width() + x] {
                     execute!(stdout, Print("██")).unwrap();
@@ -167,9 +168,59 @@ impl IO {
 
         execute!(
             stdout,
-            MoveToColumn(Self::SCREEN_OFFSET),
+            MoveToColumn(Self::REGISTRIES_WIDTH),
             Print(format!("╰{}╯\n", "──".repeat(self.width()))),
             MoveToColumn(0),
+        )
+        .unwrap()
+    }
+
+    fn print_keyboard(&self, stdout: &mut Stdout) {
+        let offset = Self::REGISTRIES_WIDTH + (self.width() * 2) as u16 + 2;
+
+        execute!(
+            stdout,
+            MoveTo(offset, 1),
+            Print(format!("╭─{}╮\n", "──────".repeat(4))),
+        )
+        .unwrap();
+
+        for y in 0..4 {
+            execute!(
+                stdout,
+                MoveToColumn(offset),
+                Print(format!("│{} │\n", " ╭───╮".repeat(4))),
+                MoveToColumn(offset),
+                Print("│ "),
+            )
+            .unwrap();
+
+            for x in 0..4 {
+                let key = y * 4 + x;
+
+                if self.is_code_pressed(key) {
+                    execute!(
+                        stdout,
+                        Print(format!("│ {} │ ", format!("{:X}", key).bold()))
+                    )
+                    .unwrap();
+                } else {
+                    execute!(stdout, Print(format!("│ {:X} │ ", key))).unwrap();
+                }
+            }
+            execute!(
+                stdout,
+                Print("│ \n"),
+                MoveToColumn(offset),
+                Print(format!("│{} │\n", " ╰───╯".repeat(4))),
+            )
+            .unwrap();
+        }
+
+        execute!(
+            stdout,
+            MoveToColumn(offset),
+            Print(format!("╰─{}╯\n", "──────".repeat(4))),
         )
         .unwrap()
     }
