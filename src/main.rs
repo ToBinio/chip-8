@@ -1,5 +1,5 @@
 use crate::clock::Clock;
-use crate::gpu::GPU;
+use crate::gpu::Gpu;
 use crate::io::{RenderContext, IO};
 use crate::memory::Memory;
 use crate::memory::ToU16;
@@ -19,7 +19,7 @@ struct Emulator {
     program_name: String,
 
     memory: Memory,
-    display: GPU,
+    display: Gpu,
     clock: Clock,
     io: IO,
 }
@@ -36,7 +36,7 @@ impl Emulator {
         Emulator {
             program_name,
             memory,
-            display: GPU::new(&io),
+            display: Gpu::new(&io),
             clock: Clock::new(),
             io,
         }
@@ -167,7 +167,7 @@ impl Emulator {
             (0x8, x, y, 0x6) => {
                 let mut y_val = self.memory.read_register(y as usize);
 
-                let rest = (y_val & 0x01);
+                let rest = y_val & 0x01;
                 y_val >>= 1;
 
                 self.memory.write_register(x as usize, y_val);
@@ -229,18 +229,18 @@ impl Emulator {
                 //todo set VF if something something got turned off
             }
             (0xE, x, 0x9, 0xE) => {
-                if (self
+                if self
                     .io
-                    .is_code_pressed(self.memory.read_register(x as usize)))
+                    .is_code_pressed(self.memory.read_register(x as usize))
                 {
                     self.memory.increment_pc();
                 }
             }
             (0xE, x, 0xA, 0x1) => {
-                if (self
+                if self
                     .io
                     .is_code_pressed(self.memory.read_register(x as usize))
-                    .not())
+                    .not()
                 {
                     self.memory.increment_pc();
                 }
@@ -268,7 +268,7 @@ impl Emulator {
 
                 let index = self.memory.read_index_register() as usize;
 
-                let first_digit = (x / 100);
+                let first_digit = x / 100;
                 let second_digit = (x / 10) % 10;
                 let third_digit = x % 10;
 

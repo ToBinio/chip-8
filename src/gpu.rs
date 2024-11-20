@@ -1,12 +1,12 @@
 use crate::io::IO;
 
-pub struct GPU {
+pub struct Gpu {
     pixels: Vec<bool>,
 }
 
-impl GPU {
-    pub fn new(io: &IO) -> GPU {
-        GPU {
+impl Gpu {
+    pub fn new(io: &IO) -> Gpu {
+        Gpu {
             pixels: vec![false; io.width() * io.height()],
         }
     }

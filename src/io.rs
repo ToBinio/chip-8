@@ -1,7 +1,7 @@
 use async_std::stream::StreamExt;
 use crossterm::cursor::{MoveTo, MoveToColumn};
 use crossterm::event::{
-    DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode, KeyEvent, KeyEventKind,
+    DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode, KeyEventKind,
     KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
 use crossterm::execute;
@@ -94,17 +94,14 @@ impl IO {
             match event {
                 Some(Ok(event)) => {
                     if let Event::Key(key_event) = event {
-                        match key_event.kind {
-                            KeyEventKind::Press => {
-                                let mut keys = pressed_keys.lock().unwrap();
+                        if key_event.kind == KeyEventKind::Press {
+                            let mut keys = pressed_keys.lock().unwrap();
 
-                                if keys.contains(&key_event.code) {
-                                    keys.retain(|key| key != &key_event.code);
-                                } else {
-                                    keys.push(key_event.code);
-                                }
+                            if keys.contains(&key_event.code) {
+                                keys.retain(|key| key != &key_event.code);
+                            } else {
+                                keys.push(key_event.code);
                             }
-                            _ => {}
                         }
                     }
 
@@ -149,7 +146,7 @@ impl IO {
         execute!(
             stdout,
             MoveTo(Self::SCREEN_OFFSET, 0),
-            Print(format!("{}\n", context.title.clone().bold())),
+            Print(format!("{}\n", context.title.bold())),
             MoveToColumn(Self::SCREEN_OFFSET),
             Print(format!("╭{}╮\n", "──".repeat(self.width()))),
         )

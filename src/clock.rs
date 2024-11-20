@@ -4,7 +4,7 @@ pub struct Clock {
     delay_timer: u8,
     sound_timer: u8,
 
-    lastTick: u128,
+    last_tick: u128,
 }
 
 impl Clock {
@@ -12,7 +12,7 @@ impl Clock {
         Clock {
             delay_timer: 0,
             sound_timer: 0,
-            lastTick: Self::get_current_millis(),
+            last_tick: Self::get_current_millis(),
         }
     }
 
@@ -25,8 +25,8 @@ impl Clock {
 
     pub fn tick(&mut self) {
         let current = Self::get_current_millis();
-        if ((current - self.lastTick) > 1000 / 60) {
-            self.lastTick += 1000 / 60;
+        if (current - self.last_tick) > 1000 / 60 {
+            self.last_tick += 1000 / 60;
 
             if self.delay_timer > 0 {
                 self.delay_timer -= 1;
@@ -40,10 +40,6 @@ impl Clock {
 
     pub fn delay_timer(&self) -> u8 {
         self.delay_timer
-    }
-
-    pub fn sound_timer(&self) -> u8 {
-        self.sound_timer
     }
 
     pub fn set_delay_timer(&mut self, value: u8) {
