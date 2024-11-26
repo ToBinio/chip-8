@@ -1,3 +1,4 @@
+use crate::io::{RenderContext, IO};
 use async_std::stream::StreamExt;
 use crossterm::cursor::{MoveTo, MoveToColumn};
 use crossterm::event::{
@@ -10,36 +11,57 @@ use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
 use std::io::{stdout, Stdout};
 use std::sync::{Arc, Mutex};
 
-pub struct IO {
+pub struct TerminalIO {
     pub pressed_keys: Arc<Mutex<Vec<KeyCode>>>,
 
     screen_width: usize,
     screen_height: usize,
 }
 
-pub struct RenderContext<'a> {
-    pub title: &'a str,
-    pub registries: &'a [u8; 16],
-    pub pixels: &'a [bool],
-}
+impl IO for TerminalIO {
+    fn width(&self) -> usize {
+        self.screen_width
+    }
 
-impl IO {
+    fn height(&self) -> usize {
+        self.screen_height
+    }
+    fn is_code_pressed(&self, code: u8) -> bool {
+        self.pressed_keys
+            .lock()
+            .unwrap()
+            .contains(&self.map_key(code))
+    }
+
+    fn should_shutdown(&self) -> bool {
+        self.is_key_pressed(KeyCode::Esc)
+    }
+
+    fn render(&self, context: RenderContext) {
+        let mut stdout = stdout();
+
+        execute!(stdout, MoveTo(0, 0), Clear(ClearType::All)).unwrap();
+
+        self.print_registries(&context, &mut stdout);
+        self.print_keyboard(&mut stdout);
+        self.print_screen(&context, &mut stdout);
+    }
+}
+impl TerminalIO {
     pub fn new(width: usize, height: usize) -> Self {
-        IO {
-            pressed_keys: Arc::new(Mutex::new(Vec::new())),
+        let pressed_keys = Arc::new(Mutex::new(Vec::new()));
+
+        let pressed_keys_clone = pressed_keys.clone();
+        async_std::task::spawn(async move {
+            TerminalIO::start(pressed_keys_clone).await;
+        });
+
+        TerminalIO {
+            pressed_keys,
             screen_width: width,
             screen_height: height,
         }
     }
-
-    pub fn width(&self) -> usize {
-        self.screen_width
-    }
-
-    pub fn height(&self) -> usize {
-        self.screen_height
-    }
-
     fn map_key(&self, value: u8) -> KeyCode {
         match value {
             0x0 => KeyCode::Char('x'),
@@ -63,19 +85,11 @@ impl IO {
             }
         }
     }
-
-    pub fn is_code_pressed(&self, code: u8) -> bool {
-        self.pressed_keys
-            .lock()
-            .unwrap()
-            .contains(&self.map_key(code))
-    }
-
-    pub fn is_key_pressed(&self, code: KeyCode) -> bool {
+    fn is_key_pressed(&self, code: KeyCode) -> bool {
         self.pressed_keys.lock().unwrap().contains(&code)
     }
 
-    pub async fn start(pressed_keys: Arc<Mutex<Vec<KeyCode>>>) {
+    async fn start(pressed_keys: Arc<Mutex<Vec<KeyCode>>>) {
         let mut reader = EventStream::new();
 
         enable_raw_mode().unwrap();
@@ -119,16 +133,6 @@ impl IO {
     }
 
     const REGISTRIES_WIDTH: u16 = 10;
-
-    pub fn render(&self, context: RenderContext) {
-        let mut stdout = stdout();
-
-        execute!(stdout, Clear(ClearType::All),).unwrap();
-
-        self.print_registries(&context, &mut stdout);
-        self.print_keyboard(&mut stdout);
-        self.print_screen(&context, &mut stdout);
-    }
 
     fn print_registries(&self, context: &RenderContext, stdout: &mut Stdout) {
         execute!(stdout, MoveTo(0, 1), Print("Registers\n"),).unwrap();

@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use web_sys::console::log_1;
 
 pub struct Clock {
     delay_timer: u8,
@@ -9,6 +9,7 @@ pub struct Clock {
 
 impl Clock {
     pub fn new() -> Clock {
+        log_1(&"clock".into());
         Clock {
             delay_timer: 0,
             sound_timer: 0,
@@ -17,8 +18,8 @@ impl Clock {
     }
 
     fn get_current_millis() -> u128 {
-        SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
+        web_time::SystemTime::now()
+            .duration_since(web_time::SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_millis()
     }

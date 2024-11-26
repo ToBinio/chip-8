@@ -1,3 +1,4 @@
+use web_sys::console::log_1;
 use crate::io::IO;
 
 pub struct Gpu {
@@ -5,7 +6,8 @@ pub struct Gpu {
 }
 
 impl Gpu {
-    pub fn new(io: &IO) -> Gpu {
+    pub fn new(io: &dyn IO) -> Gpu {
+        log_1(&"gpu".into());
         Gpu {
             pixels: vec![false; io.width() * io.height()],
         }
