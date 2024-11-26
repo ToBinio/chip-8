@@ -24,6 +24,8 @@ fn main() {
         }
     };
 
-    let mut emulator = Emulator::new(program, program_path, TerminalIO::new(64, 32));
-    emulator.run();
+    let io = TerminalIO::new(64, 32);
+    let emulator = Emulator::new(program, program_path, &io);
+
+    TerminalIO::start(io, emulator);
 }

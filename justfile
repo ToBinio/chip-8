@@ -11,6 +11,9 @@ flags: (run "programs/flags.ch8")
 
 keypad: (run "programs/keypad.ch8")
 
+web-dev:
+    cd web && bun dev
+
 wasm-build:
     wasm-pack build --features wasm
 

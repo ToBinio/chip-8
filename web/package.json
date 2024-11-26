@@ -16,6 +16,7 @@
     "chip-8": "file:../pkg"
   },
   "devDependencies": {
+    "@nuxtjs/tailwindcss": "^6.12.2",
     "vite-plugin-wasm": "^3.3.0"
   }
 }

@@ -3,7 +3,3 @@ export type RenderContext = {
     registries: [number],
     pixels: [boolean],
 }
-
-export function render(context: RenderContext) {
-    console.log(context);
-}

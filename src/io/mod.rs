@@ -19,8 +19,4 @@ pub trait IO {
     fn height(&self) -> usize;
 
     fn is_code_pressed(&self, code: u8) -> bool;
-
-    fn should_shutdown(&self) -> bool;
-
-    fn render(&self, context: RenderContext);
 }

@@ -1,5 +1,6 @@
 use web_sys::console::log_1;
 
+#[derive(Debug)]
 pub struct Clock {
     delay_timer: u8,
     sound_timer: u8,
@@ -9,7 +10,6 @@ pub struct Clock {
 
 impl Clock {
     pub fn new() -> Clock {
-        log_1(&"clock".into());
         Clock {
             delay_timer: 0,
             sound_timer: 0,
@@ -34,7 +34,9 @@ impl Clock {
             }
             if self.sound_timer > 0 {
                 self.sound_timer -= 1;
+                log_1(&"hi5".into());
                 println!("PEEP");
+                log_1(&"hi56".into());
             }
         }
     }

@@ -5,8 +5,6 @@ use crate::memory::Memory;
 use crate::memory::ToU16;
 use crate::memory::ToU8;
 use std::ops::Not;
-use std::thread::sleep;
-use std::time::Duration;
 use web_sys::console::log_1;
 
 pub mod clock;
@@ -14,63 +12,44 @@ pub mod gpu;
 pub mod io;
 pub mod memory;
 
-pub struct Emulator<Io: IO> {
+#[derive(Debug)]
+pub struct Emulator {
     program_name: String,
 
     memory: Memory,
     display: Gpu,
     clock: Clock,
-    io: Io,
 }
 
-impl<Io: IO> Emulator<Io> {
-    pub fn new(program: Vec<u8>, program_name: String, io: Io) -> Emulator<Io> {
-        log_1(&"mem1".into());
-
+impl Emulator {
+    pub fn new(program: Vec<u8>, program_name: String, io: &dyn IO) -> Emulator {
         let mut memory = Memory::new(4096);
-        log_1(&"mem2".into());
-        memory.write_slice(0x200, &program);
 
-        log_1(&"mem3".into());
+        memory.write_slice(0x200, &program);
         memory.write_pc(0x200);
 
-        log_1(&"mem4".into());
-        let em = Emulator {
+        Emulator {
             program_name,
             memory,
-            display: Gpu::new(&io),
+            display: Gpu::new(io),
             clock: Clock::new(),
-            io,
-        };
-
-        log_1(&"mem5".into());
-
-        em
-    }
-
-    pub fn run(&mut self) {
-        loop {
-            if self.io.should_shutdown() {
-                break;
-            }
-
-            self.tick();
-            self.clock.tick();
-            sleep(Duration::from_millis(2));
         }
     }
 
-    fn render(&self) {
-        let context = RenderContext {
+    pub fn tick(&mut self, io: &dyn IO) {
+        self.run_instruction(io);
+        self.clock.tick();
+    }
+
+    fn get_renderContext(&self) -> RenderContext {
+        RenderContext {
             title: &self.program_name,
             registries: self.memory.registers(),
             pixels: self.display.pixels(),
-        };
-
-        self.io.render(context);
+        }
     }
 
-    fn tick(&mut self) {
+    fn run_instruction(&mut self, io: &dyn IO) {
         let instruction = self.memory.read_u16(self.memory.read_pc() as usize);
         let instruction_parts = memory::u16_to_u4_array(instruction);
         self.memory.increment_pc();
@@ -83,7 +62,6 @@ impl<Io: IO> Emulator<Io> {
         ) {
             (0x0, 0x0, 0xE, 0x0) => {
                 self.display.clear();
-                self.render();
             }
             (0x0, 0x0, 0xE, 0xE) => {
                 let stack = self.memory.pop_stack();
@@ -206,8 +184,8 @@ impl<Io: IO> Emulator<Io> {
             (0xD, x, y, n) => {
                 //todo move to gpu
 
-                let x = self.memory.read_register(x as usize) as usize % self.io.width();
-                let y = self.memory.read_register(y as usize) as usize % self.io.height();
+                let x = self.memory.read_register(x as usize) as usize % io.width();
+                let y = self.memory.read_register(y as usize) as usize % io.height();
 
                 let mut current_pointer = self.memory.read_index_register();
 
@@ -225,21 +203,15 @@ impl<Io: IO> Emulator<Io> {
                     current_pointer += 1;
                 }
 
-                self.render();
-
                 //todo set VF if something something got turned off
             }
             (0xE, x, 0x9, 0xE) => {
-                if self
-                    .io
-                    .is_code_pressed(self.memory.read_register(x as usize))
-                {
+                if io.is_code_pressed(self.memory.read_register(x as usize)) {
                     self.memory.increment_pc();
                 }
             }
             (0xE, x, 0xA, 0x1) => {
-                if self
-                    .io
+                if io
                     .is_code_pressed(self.memory.read_register(x as usize))
                     .not()
                 {
