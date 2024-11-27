@@ -12,6 +12,8 @@ pub mod gpu;
 pub mod io;
 pub mod memory;
 
+pub mod programs;
+
 #[derive(Debug)]
 pub struct Emulator {
     program_name: String,

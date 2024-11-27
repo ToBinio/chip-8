@@ -1,15 +1,15 @@
 use crate::io::{RenderContext, IO};
 use crate::Emulator;
 use async_std::stream::StreamExt;
-use crossterm::cursor::{MoveTo, MoveToColumn};
+use crossterm::cursor::{Hide, MoveTo, MoveToColumn, Show};
 use crossterm::event::{
     DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode, KeyEventKind,
     KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
-use crossterm::execute;
 use crossterm::style::{Print, Stylize};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
-use std::io::{stdout, Stdout};
+use crossterm::{execute, queue};
+use std::io::{stdout, Stdout, Write};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
@@ -79,11 +79,16 @@ impl TerminalIO {
             TerminalIO::start_listening(pressed_keys_clone).await;
         });
 
+        let mut stdout = stdout();
+        execute!(stdout, MoveTo(0, 0), Clear(ClearType::All)).unwrap();
+
         while !terminal_io.is_key_pressed(KeyCode::Esc) {
             emulator.tick(&terminal_io);
             terminal_io.render(emulator.get_renderContext());
             sleep(Duration::from_millis(10));
         }
+
+        execute!(stdout, MoveTo(0, 0), Clear(ClearType::All)).unwrap();
     }
 
     async fn start_listening(pressed_keys: Arc<Mutex<Vec<KeyCode>>>) {
@@ -94,6 +99,7 @@ impl TerminalIO {
         let mut stdout = stdout();
         execute!(
             stdout,
+            Hide,
             EnableMouseCapture,
             PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES)
         )
@@ -125,7 +131,13 @@ impl TerminalIO {
             }
         }
 
-        execute!(stdout, DisableMouseCapture, PopKeyboardEnhancementFlags).unwrap();
+        execute!(
+            stdout,
+            Show,
+            DisableMouseCapture,
+            PopKeyboardEnhancementFlags
+        )
+        .unwrap();
         disable_raw_mode().unwrap();
     }
 
@@ -134,18 +146,18 @@ impl TerminalIO {
     fn render(&self, context: RenderContext) {
         let mut stdout = stdout();
 
-        execute!(stdout, MoveTo(0, 0), Clear(ClearType::All)).unwrap();
-
         self.print_registries(&context, &mut stdout);
         self.print_keyboard(&mut stdout);
         self.print_screen(&context, &mut stdout);
+
+        stdout.flush().unwrap()
     }
 
     fn print_registries(&self, context: &RenderContext, stdout: &mut Stdout) {
-        execute!(stdout, MoveTo(0, 1), Print("Registers\n"),).unwrap();
+        queue!(stdout, MoveTo(0, 1), Print("Registers\n"),).unwrap();
 
         for register in context.registries {
-            execute!(
+            queue!(
                 stdout,
                 MoveToColumn(0),
                 Print(format!("{:#04x}\n", register))
@@ -155,7 +167,7 @@ impl TerminalIO {
     }
 
     fn print_screen(&self, context: &RenderContext, stdout: &mut Stdout) {
-        execute!(
+        queue!(
             stdout,
             MoveTo(Self::REGISTRIES_WIDTH, 0),
             Print(format!("{}\n", context.title.bold())),
@@ -165,19 +177,19 @@ impl TerminalIO {
         .unwrap();
 
         for y in 0..self.height() {
-            execute!(stdout, MoveToColumn(Self::REGISTRIES_WIDTH), Print("│")).unwrap();
+            queue!(stdout, MoveToColumn(Self::REGISTRIES_WIDTH), Print("│")).unwrap();
             for x in 0..self.width() {
                 if context.pixels[y * self.width() + x] {
-                    execute!(stdout, Print("██")).unwrap();
+                    queue!(stdout, Print("██")).unwrap();
                 } else {
-                    execute!(stdout, Print("  ")).unwrap();
+                    queue!(stdout, Print("  ")).unwrap();
                 }
             }
 
-            execute!(stdout, Print("│\n")).unwrap();
+            queue!(stdout, Print("│\n")).unwrap();
         }
 
-        execute!(
+        queue!(
             stdout,
             MoveToColumn(Self::REGISTRIES_WIDTH),
             Print(format!("╰{}╯\n", "──".repeat(self.width()))),
@@ -189,7 +201,7 @@ impl TerminalIO {
     fn print_keyboard(&self, stdout: &mut Stdout) {
         let offset = Self::REGISTRIES_WIDTH + (self.width() * 2) as u16 + 2;
 
-        execute!(
+        queue!(
             stdout,
             MoveTo(offset, 1),
             Print(format!("╭─{}╮\n", "──────".repeat(4))),
@@ -197,7 +209,7 @@ impl TerminalIO {
         .unwrap();
 
         for y in 0..4 {
-            execute!(
+            queue!(
                 stdout,
                 MoveToColumn(offset),
                 Print(format!("│{} │\n", " ╭───╮".repeat(4))),
@@ -210,16 +222,16 @@ impl TerminalIO {
                 let key = y * 4 + x;
 
                 if self.is_code_pressed(key) {
-                    execute!(
+                    queue!(
                         stdout,
                         Print(format!("│ {} │ ", format!("{:X}", key).bold()))
                     )
                     .unwrap();
                 } else {
-                    execute!(stdout, Print(format!("│ {:X} │ ", key))).unwrap();
+                    queue!(stdout, Print(format!("│ {:X} │ ", key))).unwrap();
                 }
             }
-            execute!(
+            queue!(
                 stdout,
                 Print("│ \n"),
                 MoveToColumn(offset),
@@ -228,7 +240,7 @@ impl TerminalIO {
             .unwrap();
         }
 
-        execute!(
+        queue!(
             stdout,
             MoveToColumn(offset),
             Print(format!("╰─{}╯\n", "──────".repeat(4))),

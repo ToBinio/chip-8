@@ -1,4 +1,5 @@
 use crate::io::{RenderContext, IO};
+use crate::programs::Program;
 use crate::Emulator;
 use std::io::empty;
 use std::sync::{LazyLock, Mutex, OnceLock};
@@ -22,7 +23,7 @@ static IO: OnceLock<Mutex<WebIO>> = OnceLock::new();
 
 #[wasm_bindgen]
 pub fn init() {
-    let program = include_bytes!("../../programs/ibm-logo.ch8").to_vec();
+    let program = Program::Flags.source();
     let io = WebIO::new(64, 32);
     let emulator = Emulator::new(program, "IBM".to_string(), &io);
 

@@ -37,7 +37,7 @@ function toggleRun() {
 
   interval.value = setInterval(() => {
     step();
-  }, 10) as unknown as number
+  }, 0) as unknown as number
 }
 
 let canvasRef = useTemplateRef("canvas");
