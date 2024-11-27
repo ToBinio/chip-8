@@ -8,13 +8,15 @@ export type RenderContext = {
 }
 
 onMounted(() => {
-  init()
-
-  step()
+  reset()
 })
 
-let renderContext = ref<RenderContext>(undefined);
+function reset() {
+  init()
+  step()
+}
 
+let renderContext = ref<RenderContext | undefined>(undefined);
 
 function step() {
   tick()
@@ -22,13 +24,35 @@ function step() {
   render()
 }
 
+
+let interval = ref<number | undefined>(undefined);
+
+function toggleRun() {
+
+  if (interval.value) {
+    clearInterval(interval.value)
+    interval.value = undefined;
+    return
+  }
+
+  interval.value = setInterval(() => {
+    step();
+  }, 10) as unknown as number
+}
+
 let canvasRef = useTemplateRef("canvas");
 
 function render() {
-  let canvas = canvasRef.value!;
-  let ctx = canvas.getContext("2d")!;
+  if (!renderContext.value || !canvasRef.value)
+    return
 
-  ctx.clearRect(0, 0, 500, 500)
+  let canvas = canvasRef.value;
+
+  if (!canvas)
+    return;
+
+  let ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
 
   for (let y = 0; y < 32; y++) {
     for (let x = 0; x < 64; x++) {
@@ -45,11 +69,28 @@ function render() {
 </script>
 
 <template>
-  <div class="flex flex-col items-center">
-    <button class="bg-gray-200 p-2 hover:bg-gray-300" @click="step">
-      step
-    </button>
-    <canvas width="640" height="320" class="border-4 border-black" ref="canvas"/>
+  <div class="flex justify-center">
+    <div>
+      <div class="flex justify-between gap-3" v-for="(registry, index) in renderContext?.registries">
+        <div class="text-sm">V{{ index }}</div>
+        <div> 0x{{ registry.toString(16) }}</div>
+      </div>
+    </div>
+    <div class="flex flex-col gap-2 items-center">
+      <div class="flex gap-5">
+        <button class="bg-gray-200 p-2 hover:bg-gray-300" @click="step">
+          step
+        </button>
+        <button class="bg-gray-200 p-2 hover:bg-gray-300" :class="{'rounded-full': interval != undefined}"
+                @click="toggleRun">
+          run
+        </button>
+        <button class="bg-gray-200 p-2 hover:bg-gray-300" @click="reset">
+          reset
+        </button>
+      </div>
+      <canvas width="640" height="320" class="border-4 border-black" ref="canvas"/>
+    </div>
   </div>
 </template>
 
