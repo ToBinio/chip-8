@@ -1,3 +1,7 @@
+use serde::{Deserialize, Serialize};
+use strum::EnumIter;
+
+#[derive(Deserialize, Serialize, EnumIter)]
 pub enum Program {
     Chip8Logo,
     Corax,

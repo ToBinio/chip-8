@@ -3,6 +3,7 @@ use crate::programs::Program;
 use crate::Emulator;
 use std::io::empty;
 use std::sync::{LazyLock, Mutex, OnceLock};
+use strum::IntoEnumIterator;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 use web_sys::console::{log, log_1};
@@ -22,8 +23,17 @@ static EMULATOR: OnceLock<Mutex<Emulator>> = OnceLock::new();
 static IO: OnceLock<Mutex<WebIO>> = OnceLock::new();
 
 #[wasm_bindgen]
-pub fn init() {
-    let program = Program::Flags.source();
+pub fn get_programs() -> Vec<JsValue> {
+    Program::iter()
+        .map(|value| serde_wasm_bindgen::to_value(&value).unwrap())
+        .collect()
+}
+
+#[wasm_bindgen]
+pub fn init(program: JsValue) {
+    let program = serde_wasm_bindgen::from_value::<Program>(program)
+        .unwrap()
+        .source();
     let io = WebIO::new(64, 32);
     let emulator = Emulator::new(program, "IBM".to_string(), &io);
 

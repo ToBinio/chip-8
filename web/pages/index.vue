@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {get_render_context, init, tick} from "chip-8";
+import {get_programs, get_render_context, init, tick} from "chip-8";
 
 export type RenderContext = {
   title: string,
@@ -7,12 +7,19 @@ export type RenderContext = {
   pixels: [boolean],
 }
 
+let programs: string[] = get_programs()
+let selectedProgram = ref(programs[0])
+
+watch(selectedProgram, () => {
+  reset()
+})
+
 onMounted(() => {
   reset()
 })
 
 function reset() {
-  init()
+  init(selectedProgram.value)
   step()
 }
 
@@ -88,6 +95,11 @@ function render() {
         <button class="bg-gray-200 p-2 hover:bg-gray-300" @click="reset">
           reset
         </button>
+        <select v-model="selectedProgram">
+          <option v-for="option in programs" :value="option">
+            {{ option }}
+          </option>
+        </select>
       </div>
       <canvas width="640" height="320" class="border-4 border-black" ref="canvas"/>
     </div>
