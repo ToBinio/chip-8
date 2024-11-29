@@ -17,5 +17,6 @@ web-time = "1.1.0"
 strum = { version = "0.26", features = ["derive"] }
 
 [features]
+default = ["wasm", "cli"]
 wasm = ["dep:wasm-bindgen"]
 cli = ["dep:crossterm"]

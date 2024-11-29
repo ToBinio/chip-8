@@ -1,4 +1,4 @@
-use crate::io::{RenderContext, IO};
+use crate::io::{map_key, RenderContext, IO};
 use crate::Emulator;
 use async_std::stream::StreamExt;
 use crossterm::cursor::{Hide, MoveTo, MoveToColumn, Show};
@@ -13,6 +13,35 @@ use std::io::{stdout, Stdout, Write};
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
+use std::{env, fs};
+
+pub fn run() {
+    let program_path = env::args().nth(1);
+
+    let program_path = match program_path {
+        Some(program_path) => program_path,
+        None => {
+            println!("Please specify a program path");
+            return;
+        }
+    };
+
+    println!("{}", program_path);
+    let program = fs::read(&program_path);
+
+    let program = match program {
+        Ok(program) => program,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
+
+    let io = TerminalIO::new(64, 32);
+    let emulator = Emulator::new(program, program_path, &io);
+
+    TerminalIO::start(io, emulator);
+}
 
 pub struct TerminalIO {
     pub pressed_keys: Arc<Mutex<Vec<KeyCode>>>,
@@ -45,27 +74,7 @@ impl TerminalIO {
         }
     }
     fn map_key(&self, value: u8) -> KeyCode {
-        match value {
-            0x0 => KeyCode::Char('x'),
-            0x1 => KeyCode::Char('1'),
-            0x2 => KeyCode::Char('2'),
-            0x3 => KeyCode::Char('3'),
-            0x4 => KeyCode::Char('q'),
-            0x5 => KeyCode::Char('w'),
-            0x6 => KeyCode::Char('e'),
-            0x7 => KeyCode::Char('a'),
-            0x8 => KeyCode::Char('s'),
-            0x9 => KeyCode::Char('d'),
-            0xA => KeyCode::Char('y'),
-            0xB => KeyCode::Char('c'),
-            0xC => KeyCode::Char('4'),
-            0xD => KeyCode::Char('r'),
-            0xE => KeyCode::Char('f'),
-            0xF => KeyCode::Char('v'),
-            _ => {
-                panic!("unhandled key 0x{:x}", value);
-            }
-        }
+        KeyCode::Char(map_key(value))
     }
     fn is_key_pressed(&self, code: KeyCode) -> bool {
         self.pressed_keys.lock().unwrap().contains(&code)
@@ -84,7 +93,7 @@ impl TerminalIO {
 
         while !terminal_io.is_key_pressed(KeyCode::Esc) {
             emulator.tick(&terminal_io);
-            terminal_io.render(emulator.get_renderContext());
+            terminal_io.render(emulator.get_render_context());
             sleep(Duration::from_millis(10));
         }
 

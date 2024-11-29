@@ -1,5 +1,5 @@
 run path:
-    cargo run --features cli -- {{path}}
+    cargo run --features cli --no-default-features -- {{path}}
 
 ibm: (run "programs/ibm-logo.ch8")
 
@@ -15,7 +15,7 @@ web-dev:
     cd web && bun dev
 
 wasm-build:
-    wasm-pack build --features wasm
+    wasm-pack build --features wasm --no-default-features
 
 wasm-update: wasm-build
     cd web && bun i

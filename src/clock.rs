@@ -8,15 +8,17 @@ pub struct Clock {
     last_tick: u128,
 }
 
-impl Clock {
-    pub fn new() -> Clock {
+impl Default for Clock {
+    fn default() -> Self {
         Clock {
             delay_timer: 0,
             sound_timer: 0,
             last_tick: Self::get_current_millis(),
         }
     }
+}
 
+impl Clock {
     fn get_current_millis() -> u128 {
         web_time::SystemTime::now()
             .duration_since(web_time::SystemTime::UNIX_EPOCH)

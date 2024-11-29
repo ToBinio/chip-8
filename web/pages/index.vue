@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {get_programs, get_render_context, init, tick} from "chip-8";
-import {useEmulator} from "~/composables/emulator";
+import {useEmulator} from "~/composables/useEmulator";
 
 let programs: string[] = get_programs()
 let selectedProgram = ref(programs[0])
