@@ -59,7 +59,7 @@ pub fn tick() {
 pub fn get_render_context() -> JsValue {
     let emulator = EMULATOR.get().unwrap().lock().unwrap();
 
-    serde_wasm_bindgen::to_value(&emulator.get_renderContext()).unwrap()
+    serde_wasm_bindgen::to_value(&emulator.get_render_context()).unwrap()
 }
 
 impl IO for WebIO {

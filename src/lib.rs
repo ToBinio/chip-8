@@ -5,7 +5,6 @@ use crate::memory::Memory;
 use crate::memory::ToU16;
 use crate::memory::ToU8;
 use std::ops::Not;
-use web_sys::console::log_1;
 
 pub mod clock;
 pub mod gpu;
@@ -43,7 +42,7 @@ impl Emulator {
         self.clock.tick();
     }
 
-    fn get_renderContext(&self) -> RenderContext {
+    fn get_render_context(&self) -> RenderContext {
         RenderContext {
             title: &self.program_name,
             registries: self.memory.registers(),

@@ -1,4 +1,3 @@
-use web_sys::console::log_1;
 use crate::io::IO;
 #[derive(Debug)]
 

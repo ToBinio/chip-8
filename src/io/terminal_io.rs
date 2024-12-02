@@ -84,7 +84,7 @@ impl TerminalIO {
 
         while !terminal_io.is_key_pressed(KeyCode::Esc) {
             emulator.tick(&terminal_io);
-            terminal_io.render(emulator.get_renderContext());
+            terminal_io.render(emulator.get_render_context());
             sleep(Duration::from_millis(10));
         }
 
