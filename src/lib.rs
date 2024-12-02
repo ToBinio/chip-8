@@ -16,7 +16,6 @@ pub mod programs;
 #[derive(Debug)]
 pub struct Emulator {
     program_name: String,
-
     memory: Memory,
     display: Gpu,
     clock: Clock,
@@ -33,7 +32,7 @@ impl Emulator {
             program_name,
             memory,
             display: Gpu::new(io),
-            clock: Clock::new(),
+            clock: Clock::default(),
         }
     }
 
