@@ -22,6 +22,10 @@ impl Memory {
         self.pc = pc;
     }
 
+    pub fn decrement_pc(&mut self) {
+        self.pc -= 2;
+    }
+
     pub fn increment_pc(&mut self) {
         self.pc += 2;
     }

@@ -19,28 +19,56 @@ pub trait IO {
     fn height(&self) -> usize;
 
     fn is_code_pressed(&self, code: u8) -> bool;
+
+    fn get_just_pressed(&self) -> Vec<u8>;
 }
 
-pub fn map_key(value: u8) -> char {
+pub fn key_to_char(value: u8) -> Option<char> {
     match value {
-        0x0 => 'x',
-        0x1 => '1',
-        0x2 => '2',
-        0x3 => '3',
-        0x4 => 'q',
-        0x5 => 'w',
-        0x6 => 'e',
-        0x7 => 'a',
-        0x8 => 's',
-        0x9 => 'd',
-        0xA => 'y',
-        0xB => 'c',
-        0xC => '4',
-        0xD => 'r',
-        0xE => 'f',
-        0xF => 'v',
+        0x0 => Some('x'),
+        0x1 => Some('1'),
+        0x2 => Some('2'),
+        0x3 => Some('3'),
+        0x4 => Some('q'),
+        0x5 => Some('w'),
+        0x6 => Some('e'),
+        0x7 => Some('a'),
+        0x8 => Some('s'),
+        0x9 => Some('d'),
+        0xA => Some('y'),
+        0xB => Some('c'),
+        0xC => Some('4'),
+        0xD => Some('r'),
+        0xE => Some('f'),
+        0xF => Some('v'),
         _ => {
-            panic!("unhandled key 0x{:x}", value);
+            println!("Unknown key value: 0x{:x}", value);
+            None
+        }
+    }
+}
+
+pub fn char_to_key(value: char) -> Option<u8> {
+    match value {
+        'x' => Some(0x0),
+        '1' => Some(0x1),
+        '2' => Some(0x2),
+        '3' => Some(0x3),
+        'q' => Some(0x4),
+        'w' => Some(0x5),
+        'e' => Some(0x6),
+        'a' => Some(0x7),
+        's' => Some(0x8),
+        'd' => Some(0x9),
+        'y' => Some(0xA),
+        'c' => Some(0xB),
+        '4' => Some(0xC),
+        'r' => Some(0xD),
+        'f' => Some(0xE),
+        'v' => Some(0xF),
+        _ => {
+            println!("Unknown key value: {}", value);
+            None
         }
     }
 }

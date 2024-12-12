@@ -1,4 +1,4 @@
-use crate::io::{map_key, RenderContext, IO};
+use crate::io::{char_to_key, key_to_char, RenderContext, IO};
 use crate::Emulator;
 use async_std::stream::StreamExt;
 use crossterm::cursor::{Hide, MoveTo, MoveToColumn, Show};
@@ -45,6 +45,7 @@ pub fn run() {
 
 pub struct TerminalIO {
     pub pressed_keys: Arc<Mutex<Vec<KeyCode>>>,
+    pub just_pressed: Arc<Mutex<Vec<char>>>,
 
     screen_width: usize,
     screen_height: usize,
@@ -59,22 +60,31 @@ impl IO for TerminalIO {
         self.screen_height
     }
     fn is_code_pressed(&self, code: u8) -> bool {
-        self.pressed_keys
+        let Some(code) = key_to_char(code) else {
+            return true;
+        };
+
+        let key_code = KeyCode::Char(code);
+        self.pressed_keys.lock().unwrap().contains(&key_code)
+    }
+
+    fn get_just_pressed(&self) -> Vec<u8> {
+        self.just_pressed
             .lock()
             .unwrap()
-            .contains(&self.map_key(code))
+            .iter()
+            .filter_map(|char| char_to_key(char.clone()))
+            .collect()
     }
 }
 impl TerminalIO {
     pub fn new(width: usize, height: usize) -> Self {
         TerminalIO {
             pressed_keys: Arc::new(Mutex::new(Vec::new())),
+            just_pressed: Arc::new(Mutex::new(Vec::new())),
             screen_width: width,
             screen_height: height,
         }
-    }
-    fn map_key(&self, value: u8) -> KeyCode {
-        KeyCode::Char(map_key(value))
     }
     fn is_key_pressed(&self, code: KeyCode) -> bool {
         self.pressed_keys.lock().unwrap().contains(&code)
@@ -82,10 +92,9 @@ impl TerminalIO {
 
     pub fn start(terminal_io: TerminalIO, mut emulator: Emulator) {
         let pressed_keys = terminal_io.pressed_keys.clone();
-
-        let pressed_keys_clone = pressed_keys.clone();
+        let just_pressed = terminal_io.just_pressed.clone();
         async_std::task::spawn(async move {
-            TerminalIO::start_listening(pressed_keys_clone).await;
+            TerminalIO::start_listening(pressed_keys, just_pressed).await;
         });
 
         let mut stdout = stdout();
@@ -94,13 +103,18 @@ impl TerminalIO {
         while !terminal_io.is_key_pressed(KeyCode::Esc) {
             emulator.tick(&terminal_io);
             terminal_io.render(emulator.get_render_context());
+
+            terminal_io.just_pressed.lock().unwrap().clear();
             sleep(Duration::from_millis(10));
         }
 
         execute!(stdout, MoveTo(0, 0), Clear(ClearType::All)).unwrap();
     }
 
-    async fn start_listening(pressed_keys: Arc<Mutex<Vec<KeyCode>>>) {
+    async fn start_listening(
+        pressed_keys: Arc<Mutex<Vec<KeyCode>>>,
+        just_pressed: Arc<Mutex<Vec<char>>>,
+    ) {
         let mut reader = EventStream::new();
 
         enable_raw_mode().unwrap();
@@ -122,11 +136,14 @@ impl TerminalIO {
                     if let Event::Key(key_event) = event {
                         if key_event.kind == KeyEventKind::Press {
                             let mut keys = pressed_keys.lock().unwrap();
+                            let mut just_pressed = just_pressed.lock().unwrap();
 
                             if keys.contains(&key_event.code) {
                                 keys.retain(|key| key != &key_event.code);
                             } else {
                                 keys.push(key_event.code);
+                                just_pressed
+                                    .push(key_event.code.to_string().chars().next().unwrap());
                             }
                         }
                     }

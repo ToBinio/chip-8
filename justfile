@@ -11,6 +11,12 @@ flags: (run "programs/flags.ch8")
 
 keypad: (run "programs/keypad.ch8")
 
+break: (run "programs/breakout.ch8")
+
+tic-tac-toe: (run "programs/ultimatetictactoe.ch8")
+
+quirks: (run "programs/quirks.ch8")
+
 web-dev:
     cd web && bun dev
 

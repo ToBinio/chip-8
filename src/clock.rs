@@ -1,4 +1,8 @@
-use web_sys::console::log_1;
+#[cfg(feature = "cli")]
+use std::time::SystemTime;
+
+#[cfg(feature = "wasm")]
+use web_time::SystemTime;
 
 #[derive(Debug)]
 pub struct Clock {
@@ -20,8 +24,8 @@ impl Default for Clock {
 
 impl Clock {
     fn get_current_millis() -> u128 {
-        web_time::SystemTime::now()
-            .duration_since(web_time::SystemTime::UNIX_EPOCH)
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_millis()
     }
@@ -36,9 +40,7 @@ impl Clock {
             }
             if self.sound_timer > 0 {
                 self.sound_timer -= 1;
-                log_1(&"hi5".into());
                 println!("PEEP");
-                log_1(&"hi56".into());
             }
         }
     }

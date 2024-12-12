@@ -4,6 +4,7 @@ use crate::io::{RenderContext, IO};
 use crate::memory::Memory;
 use crate::memory::ToU16;
 use crate::memory::ToU8;
+use rand::{thread_rng, Rng, RngCore};
 use std::ops::Not;
 
 pub mod clock;
@@ -54,13 +55,15 @@ impl Emulator {
         let instruction_parts = memory::u16_to_u4_array(instruction);
         self.memory.increment_pc();
 
+        println!("unimplemented instruction: {:#06x}", instruction);
+
         match (
             instruction_parts[0],
             instruction_parts[1],
             instruction_parts[2],
             instruction_parts[3],
         ) {
-            (0x0, 0x0, 0xE, 0x0) => {
+            (0x0, 0x0, 0xE, 0x0) | (0x0, 0x0, 0xF, 0xF) => {
                 self.display.clear();
             }
             (0x0, 0x0, 0xE, 0xE) => {
@@ -181,6 +184,10 @@ impl Emulator {
             (0xA, a, b, c) => {
                 self.memory.write_index_register((a, b, c).to_u16());
             }
+            (0xB, a, b, c) => {
+                let offset = self.memory.read_register(0);
+                self.memory.write_pc((a, b, c).to_u16() + offset as u16);
+            }
             (0xD, x, y, n) => {
                 //todo move to gpu
 
@@ -189,12 +196,16 @@ impl Emulator {
 
                 let mut current_pointer = self.memory.read_index_register();
 
+                let mut was_turned_off = false;
+
                 for y_off in 0..n as usize {
                     let mut to_render = self.memory.read_u8(current_pointer as usize);
 
                     for x_off in 0..8 {
                         if (to_render & 0x01) == 0x01 {
-                            self.display.flip_pixel(x + 7 - x_off, y + y_off)
+                            if self.display.flip_pixel(x + 7 - x_off, y + y_off) {
+                                was_turned_off = true;
+                            }
                         }
 
                         to_render >>= 1
@@ -203,7 +214,14 @@ impl Emulator {
                     current_pointer += 1;
                 }
 
-                //todo set VF if something something got turned off
+                self.memory
+                    .write_register(0xF, if was_turned_off { 1 } else { 0 });
+            }
+            (0xC, x, a, b) => {
+                let nn = (a, b).to_u8();
+                let mut rng = thread_rng();
+
+                self.memory.write_register(x as usize, rng.gen::<u8>() & nn);
             }
             (0xE, x, 0x9, 0xE) => {
                 if io.is_code_pressed(self.memory.read_register(x as usize)) {
@@ -221,6 +239,16 @@ impl Emulator {
             (0xF, x, 0x0, 0x7) => {
                 self.memory
                     .write_register(x as usize, self.clock.delay_timer());
+            }
+            (0xF, x, 0x0, 0xA) => {
+                self.memory.decrement_pc();
+
+                let just_pressed = io.get_just_pressed();
+
+                if let Some(key) = just_pressed.get(0) {
+                    self.memory.write_register(x as usize, *key);
+                    self.memory.increment_pc();
+                }
             }
             (0xF, x, 0x1, 0x5) => {
                 self.clock

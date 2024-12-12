@@ -12,8 +12,15 @@ impl Gpu {
         }
     }
 
-    pub fn flip_pixel(&mut self, x: usize, y: usize) {
+    pub fn flip_pixel(&mut self, x: usize, y: usize) -> bool {
+        //todo - dont hard code sizes
+        if x >= 64 || y >= 32 {
+            return false;
+        }
+
         self.pixels[y * 64 + x] = !self.pixels[y * 64 + x];
+
+        !self.pixels[y * 64 + x]
     }
 
     pub fn clear(&mut self) {
