@@ -1,3 +1,4 @@
+use crate::Platform;
 use serde::Serialize;
 
 #[cfg(feature = "cli")]
@@ -8,16 +9,13 @@ mod web_io;
 
 #[derive(Serialize)]
 pub struct RenderContext<'a> {
+    pub platform: Platform,
     pub title: &'a str,
     pub registries: &'a [u8; 16],
     pub pixels: &'a [bool],
 }
 
 pub trait IO {
-    fn width(&self) -> usize;
-
-    fn height(&self) -> usize;
-
     fn is_code_pressed(&self, code: u8) -> bool;
 
     fn get_just_pressed(&self) -> Vec<u8>;

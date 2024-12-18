@@ -14,13 +14,13 @@ watch(() => props.renderContext, (renderContext) => {
   let ctx = canvas.getContext("2d")!;
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-  for (let y = 0; y < 32; y++) {
-    for (let x = 0; x < 64; x++) {
+  for (let y = 0; y < 64; y++) {
+    for (let x = 0; x < 128; x++) {
 
       ctx.fillStyle = "black"
 
-      if (renderContext.pixels[y * 64 + x]) {
-        ctx.fillRect(x * 10, y * 10, 10, 10)
+      if (renderContext.pixels[y * 128 + x]) {
+        ctx.fillRect(x * 5, y * 5, 5, 5)
       }
     }
   }

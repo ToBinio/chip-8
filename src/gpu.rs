@@ -1,4 +1,6 @@
 use crate::io::IO;
+use crate::Platform;
+
 #[derive(Debug)]
 
 pub struct Gpu {
@@ -6,21 +8,21 @@ pub struct Gpu {
 }
 
 impl Gpu {
-    pub fn new(io: &dyn IO) -> Gpu {
+    pub fn new(platform: Platform) -> Gpu {
         Gpu {
-            pixels: vec![false; io.width() * io.height()],
+            pixels: vec![false; platform.width() * platform.height()],
         }
     }
 
-    pub fn flip_pixel(&mut self, x: usize, y: usize) -> bool {
+    pub fn flip_pixel(&mut self, platform: Platform, x: usize, y: usize) -> bool {
         //todo - dont hard code sizes
-        if x >= 64 || y >= 32 {
+        if x >= platform.width() || y >= platform.height() {
             return false;
         }
 
-        self.pixels[y * 64 + x] = !self.pixels[y * 64 + x];
+        self.pixels[y * platform.width() + x] = !self.pixels[y * platform.width() + x];
 
-        !self.pixels[y * 64 + x]
+        !self.pixels[y * platform.width() + x]
     }
 
     pub fn clear(&mut self) {

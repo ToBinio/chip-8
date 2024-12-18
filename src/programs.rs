@@ -11,6 +11,7 @@ pub enum Program {
     Breakout,
     UltimateTictactoe,
     Quirks,
+    SlipperySlope,
 }
 
 impl Program {
@@ -26,6 +27,7 @@ impl Program {
                 include_bytes!("../programs/ultimatetictactoe.ch8").to_vec()
             }
             &Program::Quirks => include_bytes!("../programs/quirks.ch8").to_vec(),
+            &Program::SlipperySlope => include_bytes!("../programs/slipperyslope.ch8").to_vec(),
         }
     }
 }

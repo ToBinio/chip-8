@@ -1,5 +1,5 @@
 use crate::io::{char_to_key, key_to_char, RenderContext, IO};
-use crate::Emulator;
+use crate::{Emulator, Platform};
 use async_std::stream::StreamExt;
 use crossterm::cursor::{Hide, MoveTo, MoveToColumn, Show};
 use crossterm::event::{
@@ -37,8 +37,8 @@ pub fn run() {
         }
     };
 
-    let io = TerminalIO::new(64, 32);
-    let emulator = Emulator::new(program, program_path, &io);
+    let io = TerminalIO::new();
+    let emulator = Emulator::new(program, program_path, Platform::SuperChip, &io);
 
     TerminalIO::start(io, emulator);
 }
@@ -46,19 +46,9 @@ pub fn run() {
 pub struct TerminalIO {
     pub pressed_keys: Arc<Mutex<Vec<KeyCode>>>,
     pub just_pressed: Arc<Mutex<Vec<char>>>,
-
-    screen_width: usize,
-    screen_height: usize,
 }
 
 impl IO for TerminalIO {
-    fn width(&self) -> usize {
-        self.screen_width
-    }
-
-    fn height(&self) -> usize {
-        self.screen_height
-    }
     fn is_code_pressed(&self, code: u8) -> bool {
         let Some(code) = key_to_char(code) else {
             return true;
@@ -78,12 +68,10 @@ impl IO for TerminalIO {
     }
 }
 impl TerminalIO {
-    pub fn new(width: usize, height: usize) -> Self {
+    pub fn new() -> Self {
         TerminalIO {
             pressed_keys: Arc::new(Mutex::new(Vec::new())),
             just_pressed: Arc::new(Mutex::new(Vec::new())),
-            screen_width: width,
-            screen_height: height,
         }
     }
     fn is_key_pressed(&self, code: KeyCode) -> bool {
@@ -173,7 +161,7 @@ impl TerminalIO {
         let mut stdout = stdout();
 
         self.print_registries(&context, &mut stdout);
-        self.print_keyboard(&mut stdout);
+        self.print_keyboard(&mut stdout, context.platform.width());
         self.print_screen(&context, &mut stdout);
 
         stdout.flush().unwrap()
@@ -193,19 +181,22 @@ impl TerminalIO {
     }
 
     fn print_screen(&self, context: &RenderContext, stdout: &mut Stdout) {
+        let height = context.platform.height();
+        let width = context.platform.width();
+
         queue!(
             stdout,
             MoveTo(Self::REGISTRIES_WIDTH, 0),
             Print(format!("{}\n", context.title.bold())),
             MoveToColumn(Self::REGISTRIES_WIDTH),
-            Print(format!("╭{}╮\n", "──".repeat(self.width()))),
+            Print(format!("╭{}╮\n", "──".repeat(context.platform.width()))),
         )
         .unwrap();
 
-        for y in 0..self.height() {
+        for y in 0..height {
             queue!(stdout, MoveToColumn(Self::REGISTRIES_WIDTH), Print("│")).unwrap();
-            for x in 0..self.width() {
-                if context.pixels[y * self.width() + x] {
+            for x in 0..width {
+                if context.pixels[y * width + x] {
                     queue!(stdout, Print("██")).unwrap();
                 } else {
                     queue!(stdout, Print("  ")).unwrap();
@@ -218,14 +209,14 @@ impl TerminalIO {
         queue!(
             stdout,
             MoveToColumn(Self::REGISTRIES_WIDTH),
-            Print(format!("╰{}╯\n", "──".repeat(self.width()))),
+            Print(format!("╰{}╯\n", "──".repeat(width))),
             MoveToColumn(0),
         )
         .unwrap()
     }
 
-    fn print_keyboard(&self, stdout: &mut Stdout) {
-        let offset = Self::REGISTRIES_WIDTH + (self.width() * 2) as u16 + 2;
+    fn print_keyboard(&self, stdout: &mut Stdout, screen_width: usize) {
+        let offset = Self::REGISTRIES_WIDTH + (screen_width * 2) as u16 + 2;
 
         queue!(
             stdout,

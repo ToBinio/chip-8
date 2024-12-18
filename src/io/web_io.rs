@@ -1,6 +1,6 @@
 use crate::io::{char_to_key, key_to_char, IO};
 use crate::programs::Program;
-use crate::Emulator;
+use crate::{Emulator, Platform};
 use std::ops::Not;
 use std::sync::{Mutex, OnceLock};
 use strum::IntoEnumIterator;
@@ -11,8 +11,6 @@ use web_sys::console::log_1;
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct WebIO {
-    width: usize,
-    height: usize,
     pressed_keys: Vec<char>,
     just_pressed_keys: Vec<char>,
 }
@@ -35,8 +33,8 @@ pub fn init(program: JsValue) {
     let program = serde_wasm_bindgen::from_value::<Program>(program)
         .unwrap()
         .source();
-    let io = WebIO::new(64, 32);
-    let emulator = Emulator::new(program, "IBM".to_string(), &io);
+    let io = WebIO::new();
+    let emulator = Emulator::new(program, "IBM".to_string(), Platform::SuperChip, &io);
 
     match (IO.get(), EMULATOR.get()) {
         (Some(io_lock), Some(emulator_lock)) => {
@@ -81,14 +79,6 @@ pub fn on_key_up(key: char) {
 }
 
 impl IO for WebIO {
-    fn width(&self) -> usize {
-        self.width
-    }
-
-    fn height(&self) -> usize {
-        self.height
-    }
-
     fn is_code_pressed(&self, code: u8) -> bool {
         let Some(key) = key_to_char(code) else {
             return true;
@@ -106,10 +96,8 @@ impl IO for WebIO {
 }
 
 impl WebIO {
-    pub fn new(width: usize, height: usize) -> WebIO {
+    pub fn new() -> WebIO {
         WebIO {
-            height,
-            width,
             pressed_keys: vec![],
             just_pressed_keys: vec![],
         }
